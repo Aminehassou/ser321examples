@@ -204,7 +204,7 @@ class WebServer {
           query_pairs = splitQuery(request.replace("multiply?", ""));
 
           // extract required fields from parameters
-          if (query_pairs.get("num1") == null || query_pairs.get("num2") == null) {
+          if (query_pairs.get("num1").equals("") || query_pairs.get("num2").equals("")) {
             builder.append("HTTP/1.1 400 Bad Request\n");
             builder.append("Content-Type: text/html; charset=utf-8\n");
             builder.append("\n");
