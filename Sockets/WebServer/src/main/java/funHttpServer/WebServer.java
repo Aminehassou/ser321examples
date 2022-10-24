@@ -196,8 +196,7 @@ class WebServer {
             builder.append("File not found: " + file);
           }
         } else if (request.contains("multiply?")) {
-          // This multiplies two numbers, there is NO error handling, so when
-          // wrong data is given this just crashes
+          // This multiplies two numbers
 
           Map<String, String> query_pairs = new LinkedHashMap<String, String>();
           // extract path parameters
@@ -205,7 +204,7 @@ class WebServer {
           String n1 = query_pairs.get("num1");
           String n2 = query_pairs.get("num2");
           // check for empty params
-          if (n1.equals("") || n2.equals("")) {
+          if (n1.equals("") || n1 == null || n2.equals("") || n2 == null) {
             builder.append("HTTP/1.1 400 Bad Request\n");
             builder.append("Content-Type: text/html; charset=utf-8\n");
             builder.append("\n");
@@ -216,10 +215,12 @@ class WebServer {
               Integer num1 = Integer.parseInt(query_pairs.get("num1"));
               Integer num2 = Integer.parseInt(query_pairs.get("num2"));
               Integer result = num1 * num2;
+
               builder.append("HTTP/1.1 200 OK\n");
               builder.append("Content-Type: text/html; charset=utf-8\n");
               builder.append("\n");
               builder.append("Result is: " + result);
+
             } catch (NumberFormatException e) {
               builder.append("HTTP/1.1 400 Bad Request\n");
               builder.append("Content-Type: text/html; charset=utf-8\n");
@@ -227,9 +228,6 @@ class WebServer {
               builder.append("You have to give 2 numbers");
             }
           }
-
-          // TODO: Include error handling here with a correct error code and
-          // a response that makes sense
 
         } else if (request.contains("github?")) {
           // pulls the query from the request and runs it with GitHub's REST API
