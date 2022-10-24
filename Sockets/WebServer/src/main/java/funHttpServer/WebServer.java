@@ -202,25 +202,30 @@ class WebServer {
           Map<String, String> query_pairs = new LinkedHashMap<String, String>();
           // extract path parameters
           query_pairs = splitQuery(request.replace("multiply?", ""));
-
-          // extract required fields from parameters
-          if (query_pairs.get("num1").equals("") || query_pairs.get("num2").equals("")) {
+          String n1 = query_pairs.get("num1");
+          String n2 = query_pairs.get("num2");
+          // check for empty params
+          if (n1.equals("") || n2.equals("")) {
             builder.append("HTTP/1.1 400 Bad Request\n");
             builder.append("Content-Type: text/html; charset=utf-8\n");
             builder.append("\n");
-            builder.append("You have to give 2 parameters and those 2 parameters have to be integers");
+            builder.append("You have to give 2 non-empty parameters");
           } else {
-            Integer num1 = Integer.parseInt(query_pairs.get("num1"));
-            Integer num2 = Integer.parseInt(query_pairs.get("num2"));
-            System.out.println(num2);
-            // do math
-            Integer result = num1 * num2;
-
-            // Generate response
-            builder.append("HTTP/1.1 200 OK\n");
-            builder.append("Content-Type: text/html; charset=utf-8\n");
-            builder.append("\n");
-            builder.append("Result is: " + result);
+            // try parsing int, if failed, return error
+            try {
+              Integer num1 = Integer.parseInt(query_pairs.get("num1"));
+              Integer num2 = Integer.parseInt(query_pairs.get("num2"));
+              Integer result = num1 * num2;
+              builder.append("HTTP/1.1 200 OK\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n");
+              builder.append("\n");
+              builder.append("Result is: " + result);
+            } catch (NumberFormatException e) {
+              builder.append("HTTP/1.1 400 Bad Request\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n");
+              builder.append("\n");
+              builder.append("You have to give 2 numbers");
+            }
           }
 
           // TODO: Include error handling here with a correct error code and
