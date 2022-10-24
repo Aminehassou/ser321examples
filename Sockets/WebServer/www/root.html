@@ -1,15 +1,27 @@
 <html>
-	<head>
-		<link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
-	</head>
-	<body>
-		<h3>You can make the following GET requests<h3>
-		<ul>
-			<li>/file/sample.html -- returns the content of the file sample.html</li>
-			<li>/json -- returns a json of the /random request</a></li>
-			<li>/random -- returns index.html</a></li>
-		</ul>
-		<h3>File Structure in www (you can use /file/www/FILENAME):</h3>
-		${links}
-	</body>
+
+<head>
+	<link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
+</head>
+
+<body>
+	<h3>You can make the following GET requests<h3>
+			<ul>
+				<li>/file/sample.html -- returns the content of the file sample.html</li>
+				<li>/json -- returns a json of the /random request</li>
+				<li>/random -- returns index.html</li>
+				<li>/multiply -- returns the result of multiplication between two integers. Example:
+					"/multiply?num1=2&num2=3"</li>
+				<li>/github -- returns the full names of a GitHub user's repositories, id of each repository, and names of the repository owners. Example:
+					"/github?query=users/amehlhase316/repos"</li>
+				<li>/base64 -- encodes or decodes the given string and returns the result. Takes 2 parameters, the message to encode/decode and the type of operation (encode or decode). <br> Example 1:
+					"/base64?message=hello&operation=encode" <br>Example 2: "/base64?message=aGVsbG8=&operation=decode"</li>
+				<li>/anagram -- checks if 2 words are anagrams of eachother and returns the result. Example:
+					"/anagram?string1=rad&string2=dar"</li>
+
+			</ul>
+			<h3>File Structure in www (you can use /file/www/FILENAME):</h3>
+			${links}
+</body>
+
 </html>

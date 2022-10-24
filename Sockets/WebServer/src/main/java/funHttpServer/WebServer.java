@@ -18,13 +18,12 @@ package funHttpServer;
 
 import java.io.*;
 import java.net.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Random;
-import java.util.Map;
-import java.util.LinkedHashMap;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 import java.nio.charset.Charset;
+import org.json.*;
+
+import netscape.javascript.JSException;
 
 class WebServer {
   public static void main(String args[]) {
@@ -197,36 +196,49 @@ class WebServer {
           }
         } else if (request.contains("multiply?")) {
           // This multiplies two numbers
-
           Map<String, String> query_pairs = new LinkedHashMap<String, String>();
           // extract path parameters
-          query_pairs = splitQuery(request.replace("multiply?", ""));
-          String n1 = query_pairs.get("num1");
-          String n2 = query_pairs.get("num2");
-          // check for empty params
-          if (n1.equals("") || n1 == null || n2.equals("") || n2 == null) {
-            builder.append("HTTP/1.1 400 Bad Request\n");
-            builder.append("Content-Type: text/html; charset=utf-8\n");
-            builder.append("\n");
-            builder.append("You have to give 2 non-empty parameters");
-          } else {
-            // try parsing int, if failed, return error
-            try {
-              Integer num1 = Integer.parseInt(query_pairs.get("num1"));
-              Integer num2 = Integer.parseInt(query_pairs.get("num2"));
-              Integer result = num1 * num2;
+          // try splitquery, if out of bounds, catch exception and let following
+          // conditional take care of it
+          try {
+            query_pairs = splitQuery(request.replace("multiply?", ""));
+          } catch (StringIndexOutOfBoundsException e) {
+          }
 
-              builder.append("HTTP/1.1 200 OK\n");
-              builder.append("Content-Type: text/html; charset=utf-8\n");
-              builder.append("\n");
-              builder.append("Result is: " + result);
-
-            } catch (NumberFormatException e) {
+          if (query_pairs.get("num1") != null && query_pairs.get("num2") != null) {
+            String n1 = query_pairs.get("num1");
+            String n2 = query_pairs.get("num2");
+            // check for empty params
+            if (n1.equals("") || n2.equals("")) {
               builder.append("HTTP/1.1 400 Bad Request\n");
               builder.append("Content-Type: text/html; charset=utf-8\n");
               builder.append("\n");
-              builder.append("You have to give 2 numbers");
+              builder.append("400 - Bad Request: You have to give 2 non-empty parameters");
+            } else {
+              // try parsing int, if failed, return error
+              try {
+                Integer num1 = Integer.parseInt(query_pairs.get("num1"));
+                Integer num2 = Integer.parseInt(query_pairs.get("num2"));
+                Integer result = num1 * num2;
+
+                builder.append("HTTP/1.1 200 OK\n");
+                builder.append("Content-Type: text/html; charset=utf-8\n");
+                builder.append("\n");
+                builder.append("Result is: " + result);
+
+              } catch (NumberFormatException e) {
+                builder.append("HTTP/1.1 400 Bad Request\n");
+                builder.append("Content-Type: text/html; charset=utf-8\n");
+                builder.append("\n");
+                builder.append("400 - Bad Request: You have to give 2 numbers");
+              }
             }
+
+          } else {
+            builder.append("HTTP/1.1 400 Bad Request\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n");
+            builder.append("\n");
+            builder.append("400 - Bad Request: You have to give 2 parameters");
           }
 
         } else if (request.contains("github?")) {
@@ -240,18 +252,135 @@ class WebServer {
           // "/repos/OWNERNAME/REPONAME/contributors"
 
           Map<String, String> query_pairs = new LinkedHashMap<String, String>();
-          query_pairs = splitQuery(request.replace("github?", ""));
-          String json = fetchURL("https://api.github.com/" + query_pairs.get("query"));
-          System.out.println(json);
+          try {
+            query_pairs = splitQuery(request.replace("github?", ""));
+            String json = fetchURL("https://api.github.com/" + query_pairs.get("query"));
 
-          builder.append("HTTP/1.1 200 OK\n");
-          builder.append("Content-Type: text/html; charset=utf-8\n");
-          builder.append("\n");
-          builder.append("Check the todos mentioned in the Java source file");
-          // TODO: Parse the JSON returned by your fetch and create an appropriate
-          // response based on what the assignment document asks for
+            StringBuilder JSONData = new StringBuilder();
 
-        } else {
+            JSONArray repoArr = new JSONArray(json);
+            for (int i = 0; i < repoArr.length(); i++) {
+              JSONData.append("Repo " + (i + 1));
+              JSONData.append("<br>");
+
+              JSONData.append("Full name: " + repoArr.getJSONObject(i).getString("full_name"));
+              JSONData.append("<br>");
+
+              JSONData.append("ID: " + String.valueOf(repoArr.getJSONObject(i).getNumber("id")));
+              JSONData.append("<br>");
+
+              JSONData.append("Owner: " + repoArr.getJSONObject(i).getJSONObject("owner").getString("login"));
+              JSONData.append("<br>");
+              JSONData.append("<br>");
+
+            }
+            builder.append("HTTP/1.1 200 OK\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n");
+            builder.append("\n");
+            builder.append(JSONData.toString());
+          }
+          catch (JSONException e) {
+            builder.append("HTTP/1.1 400 Bad Request\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n");
+            builder.append("\n");
+            builder.append("400 - Bad Request: Unexpected API call, please only query using the /users/{username}/repos endpoint");
+          }
+          catch (StringIndexOutOfBoundsException e) {
+            builder.append("HTTP/1.1 400 Bad Request\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n");
+            builder.append("\n");
+            builder.append("400 - Bad Request: You have to give 1 parameter (query)");
+          }
+
+        } else if (request.contains("base64?")) {
+          Map<String, String> query_pairs = new LinkedHashMap<String, String>();
+          try {
+            String result = null;
+            query_pairs = splitQuery(request.replace("base64?", ""));
+            if (query_pairs.get("operation").equals("encode")) {
+              result = Base64.getEncoder().encodeToString(query_pairs.get("message").getBytes());
+            }
+            else if (query_pairs.get("operation").equals("decode")) {
+              result = new String(Base64.getDecoder().decode(query_pairs.get("message").getBytes()), StandardCharsets.UTF_8);
+            }
+            if (result == null) {
+              builder.append("HTTP/1.1 400 Bad Request\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n");
+              builder.append("\n");
+              builder.append("400 - Bad Request: your operation parameter may have incorrect syntax");
+            }
+            else {
+              StringBuilder JSONData = new StringBuilder();
+
+              builder.append("HTTP/1.1 200 OK\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n");
+              builder.append("\n");
+              builder.append(result);
+            }
+          }
+          catch (IllegalArgumentException e) {
+            builder.append("HTTP/1.1 400 Bad Request\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n");
+            builder.append("\n");
+            builder.append("400 - Bad Request: You may be trying to decode a non-base64 message");
+          }
+          catch (StringIndexOutOfBoundsException e) {
+            builder.append("HTTP/1.1 400 Bad Request\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n");
+            builder.append("\n");
+            builder.append("400 - Bad Request: You have to give 2 parameters (message and operation)");
+          }
+          catch (NullPointerException e) {
+            builder.append("HTTP/1.1 400 Bad Request\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n");
+            builder.append("\n");
+            builder.append("400 - Bad Request: You may be missing a parameter or have too many parameters");
+          }
+        }
+        else if (request.contains("anagram?")) {
+          Map<String, String> query_pairs = new LinkedHashMap<String, String>();
+          boolean isAnagram = true;
+          try {
+            query_pairs = splitQuery(request.replace("anagram?", ""));
+            String string1 = query_pairs.get("string1");
+            String string2 = query_pairs.get("string2");
+            // Check if same length
+            if (string1.length() != string2.length()) {
+              isAnagram = false;
+            }
+            else {
+              char[] a1 = string1.toCharArray();
+              char[] a2 = string2.toCharArray();
+              // Sort arrays to check for anagram
+              Arrays.sort(a1);
+              Arrays.sort(a2);
+              isAnagram = Arrays.equals(a1, a2);
+            }
+            builder.append("HTTP/1.1 200 OK\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n");
+            builder.append("\n");
+            if (isAnagram) {
+              builder.append("Yes, the two words are anagrams of each other");
+            }
+            else {
+              builder.append("No, the two words aren't anagrams of each other");
+            }
+
+          }
+          catch (StringIndexOutOfBoundsException e) {
+            builder.append("HTTP/1.1 400 Bad Request\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n");
+            builder.append("\n");
+            builder.append("400 - Bad Request: You have to give 2 parameters (string1 and string2)");
+          }
+          catch (NullPointerException e) {
+            builder.append("HTTP/1.1 400 Bad Request\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n");
+            builder.append("\n");
+            builder.append("400 - Bad Request: You may be missing a parameter or have too many parameters");
+          }
+        }
+        else {
           // if the request is not recognized at all
 
           builder.append("HTTP/1.1 400 Bad Request\n");
